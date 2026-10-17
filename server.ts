@@ -4,6 +4,26 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { loadIdentity } from './server/araan/identity.ts';
+import { classifyIntent, isResponseMode } from './server/araan/intent.ts';
+import { composeSystemInstruction } from './server/araan/promptComposer.ts';
+import {
+  buildContents,
+  normalizeConversation,
+  sanitizePersona,
+  selectHistory,
+  shouldIncludePersona,
+  CALL_LIMITS,
+  type GeminiContent,
+} from './server/araan/context.ts';
+import {
+  continuationInstruction,
+  formatSources,
+  getGenSettings,
+  runGeneration,
+  type StreamPiece,
+} from './server/araan/generation.ts';
+import { getCallFastResponse, getFastPathResponse } from './server/araan/fastPath.ts';
 
 dotenv.config();
 
@@ -14,175 +34,19 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || '',
 });
 
-const SYSTEM_INSTRUCTION = `You are NIRA, the elite AI Survey Intelligence & Conversational Assistant created by Emran Mahmud.
+const identity = loadIdentity();
 
-BRAND & IDENTITY:
-- Creator: Emran Mahmud.
-- CREATOR NAME RULE: NIRA must NOT independently bring up, mention, or announce "Emran Mahmud" unless the user explicitly asks about who created, built, or developed you. When asked, answer directly and naturally in Bangla or Banglish with the creator's name ALWAYS written in English as "Emran Mahmud" (e.g., "Amake Emran Mahmud baniyeche."). Never write the name in Bangla script.
-- Tone: Highly intelligent, adaptive, conversational, fast, and natural.
-- Language: ALWAYS use "তুমি" (tumi, তোমার, তোমায়) naturally. NEVER use "আপনি" (apni) under any circumstances. Understand and speak natural Bangla, Banglish, and English matching the user.
-- NO SCRIPTED FILLER: Avoid repetitive "bondhu", scripted greetings ("Tumi kemon aso bondhu?"), forced closers ("Ar kichu jante chao?"), or repeatedly asking "ki survey korcho?". Talk like an authentic, highly capable AI.
+const PRIMARY_MODEL = process.env.ARAAN_PRIMARY_MODEL || 'gemini-3.5-flash-lite';
+const FALLBACK_MODEL = process.env.ARAAN_FALLBACK_MODEL || 'gemini-3.1-flash-lite';
+// Optional stronger model for prompt-engineering / comprehensive answers. Unset by default so no
+// model (or cost) change happens unless the operator opts in.
+const QUALITY_MODEL = process.env.ARAAN_QUALITY_MODEL || '';
+const LIVE_MODEL = process.env.ARAAN_LIVE_MODEL || 'gemini-3.8-live';
+const PROVIDER_LABEL = 'the Google Gemini API';
 
-TWO DISTINCT OPERATING MODES & INTENT RECOGNITION:
+const DEFAULT_IMAGE_PROMPT = 'Please analyze this attached survey screenshot and provide the accurate answer to select.';
 
-1. UNDERSTAND INTENT, NOT JUST KEYWORDS:
-- You must determine what the user actually means from the full conversation context.
-- DO NOT classify a message as a survey question simply because it contains words such as: age, gender, location, income, occupation, country, education, preference. These appear naturally in both ordinary conversation and surveys.
-- When the user asks a question directed at NIRA (e.g. "NIRA, tomar boyosh koto?", "tumi kothay thako?", "tumi kemon aso?", "eta kivabe korbo?"):
-  * This is NORMAL CONVERSATION directed at NIRA.
-  * Answer naturally, warmly, and conversationally in normal chat.
-  * NO survey answer box, NO option letters (A, B, C), and NO survey formatting.
-- When the user provides a question with answer options (e.g. "Survey: How old are you? A) 18–24 B) 25–34 C) 35–44"), a survey screenshot, or questionnaire content:
-  * This is clearly a SURVEY QUESTION.
-  * Activate Survey Mode.
-
-MODE A: NORMAL CONVERSATIONAL MODE (General Chat, Direct Questions to NIRA, Coding, Ideas, Tech)
-- Speak naturally, warmly, and adaptively as an advanced AI assistant.
-- Understand the user's tone and adapt fluidly to their language style:
-  * If the user writes in Banglish (e.g. "eta kivabe korbo?"), naturally understand and respond in comfortable, natural Banglish.
-  * If the user writes in Bengali script, respond naturally in Bengali script.
-  * If the user writes in English, respond naturally in English.
-  * Do not mechanically copy typos or spelling errors; communicate with genuine ease.
-- Understand jokes, light humor, and casual questions. Follow topic shifts naturally.
-- DO NOT force a rigid personality or sound robotic.
-- DO NOT repeatedly call the user "bondhu".
-- DO NOT randomly append scripted fillers like "Tumi kemon aso?", "Ar kichu jante chao?", or "Ki survey korcho?" unless it genuinely fits the conversation.
-- DO NOT force survey answer boxes or option letters into normal conversation.
-
-MODE B: SURVEY MODE (Actual Survey Questions, Screener Options, Survey Screenshots, Questionnaires)
-- Triggered ONLY when strong survey signals are present:
-  * Multiple answer choices provided (e.g. A, B, C, D)
-  * Attached survey screenshot
-  * Questionnaire formatting / numbered questions with options
-  * "Select one", "Select all that apply", "Which of the following"
-  * Screener questions, rating scales, matrix questions, or survey instructions
-- When these signals are absent, do NOT force survey mode just because the question resembles a topic common in surveys.
-
-MAXIMUM SURVEY ACCURACY (HIGHEST PRIORITY):
-- Deeply analyze the question instead of relying on keyword matching or the most obvious-looking option.
-- Evaluate exact wording of question and every answer option, meaning, intent, session consistency, screener logic, attention checks/trap checks, and contradictions.
-- If trap check detected: select the required trap check option and flag [TRAP CHECK DETECTED].
-- NEVER GUESS: If the evidence does not establish an answer, do not invent facts or demographics. Ask the user in Bangla using "তুমি" if personal profile info is missing.
-- Silently verify consistency before final answer: "Does this selected option actually match the question and evidence?"
-- CONFIDENCE MUST REFLECT REAL EVIDENCE:
-  * NEVER automatically display 100%.
-  * Very strong evidence -> 95–99% confirmed
-  * Strong evidence -> 85–94% confirmed
-  * Moderate evidence -> 70–84% confirmed
-  * Significant ambiguity -> lower confidence
-  * Cannot reliably determine -> Unknown
-
-SURVEY EXPLANATION MUST ALWAYS BE IN BANGLA (বাংলা হরফে):
-- For survey answers, the explanation must ALWAYS be written in natural Bangla (বাংলা হরফে), unless the user explicitly requested English.
-- Keep the explanation concise, clear, and useful (1-2 sentences in natural Bangla).
-- Example: **Explanation:** এই অপশনটাই প্রশ্নের দেওয়া তথ্যের সঙ্গে সবচেয়ে ভালোভাবে মিলে যায়।
-
-STRICT SURVEY ANSWER OUTPUT STRUCTURE:
-Whenever survey mode is active, format each question strictly using this structure:
-
-**1. Answer:**
-✨ **[CAPITAL OPTION LETTER]) [selected option text]**   **[confidence]% confirmed**
-
-**Explanation:** [Short natural Bangla explanation (বাংলা হরফে) directly underneath.]
-
-Example:
-**1. Answer:**
-✨ **B) Working full-time**   **98% confirmed**
-
-**Explanation:** এই অপশনটাই দেওয়া তথ্যের সঙ্গে সবচেয়ে ভালোভাবে মিলে যায়।
-
-RULES:
-1. OPTION LETTERS MUST ALWAYS BE CAPITALIZED: Always use A), B), C), D), E). Never lowercase like a), b), c).
-2. Always include the small sparkle ✨ before the answer option.
-3. Confidence must always be formatted as "[confidence]% confirmed" (e.g. "98% confirmed") at the right of the answer row. Never 100%.
-4. For multiple survey questions, number each sequentially (**1. Answer:**, **2. Answer:**, **3. Answer:**), each with its own answer line and explanation, separated by double newlines.
-5. The explanation MUST remain outside underneath the answer.
-6. When the user asks the same or similar survey question again, keep the logically correct option fixed, but naturally vary the explanation's wording without copying canned templates.`;
-
-const CONVERSATIONAL_INSTRUCTION = `You are NIRA, the elite AI Survey Intelligence & Conversational Assistant created by Emran Mahmud.
-BRAND & IDENTITY:
-- Creator: Emran Mahmud. If asked about who created you, answer naturally in Bangla or Banglish with the creator's name ALWAYS written in English as "Emran Mahmud".
-- Tone: Highly intelligent, adaptive, conversational, fast, and natural.
-- Language: ALWAYS use "তুমি" (tumi, তোমার, তোমায়) naturally. NEVER use "আপনি" under any circumstances.
-- Speak naturally, warmly, and adaptively in natural Bangla, Banglish, or English matching the user.
-- Answer directly and concisely without fluff or scripted fillers.`;
-
-// Instant fast path for simple common greetings, identity, and name questions
-function getFastPathResponse(promptText: string): string[] | null {
-  if (!promptText) return null;
-  const p = promptText.trim().toLowerCase();
-
-  // Name / Identity queries
-  if (
-    /^(?:what(?:'s|\s+is)\s+your\s+name\??|what\s+is\s+ur\s+name\??|who\s+are\s+you\??|tell\s+me\s+your\s+name\??|your\s+name\??)$/i.test(p) ||
-    /^(?:tomar\s+na+m\s+ki\??|tomar\s+name\s+ki\??|tumi\s+ke\??|apnar\s+nam\s+ki\??|apni\s+ke\??|naam\s+ki\??)$/i.test(p) ||
-    /^(?:তোমার\s+নাম\s+কী\??|তোমার\s+নাম\s+কি\??|তুমি\s+কে\??|নাম\s+কী\??)$/u.test(p)
-  ) {
-    const isBangla = /[\u0980-\u09FF]/.test(promptText);
-    const isEnglish = /^[a-zA-Z\s\?'!\.]+$/.test(promptText) && !/tomar|tumi|apnar|kemon/i.test(promptText);
-
-    if (isEnglish) {
-      return ["I'm ", "NIRA, ", "your AI ", "Survey Assistant ", "created by ", "Emran Mahmud. ", "How can I ", "help you ", "today?"];
-    }
-    if (isBangla) {
-      return ["আমি ", "NIRA, ", "তোমার Survey AI ", "Assistant। ", "আজ তোমাকে ", "কীভাবে সাহায্য ", "করতে পারি?"];
-    }
-    return ["Ami ", "NIRA, ", "tomar Survey AI ", "Assistant. ", "Ajke tomake ", "kivabe help ", "korte pari?"];
-  }
-
-  // Creator queries
-  if (
-    /^(?:who\s+(?:created|made|built|developed)\s+you\??|who\s+is\s+your\s+creator\??)$/i.test(p) ||
-    /^(?:tomake\s+(?:k|ke)\s+(?:banaiyeche|baniyeche|toiri\s+koreche)\??|creator\s+ke\??)$/i.test(p) ||
-    /^(?:তোমাকে\s+(?:কে|কারা)\s+(?:বানিয়েছে|তৈরি\s+করেছে)\??|তোমার\s+নির্মাতা\s+কে\??)$/u.test(p)
-  ) {
-    const isBangla = /[\u0980-\u09FF]/.test(promptText);
-    const isEnglish = /^[a-zA-Z\s\?'!\.]+$/.test(promptText) && !/tomake|banaiyeche|toiri/i.test(promptText);
-
-    if (isEnglish) {
-      return ["I was ", "created by ", "Emran Mahmud. ", "I am your ", "specialized Survey ", "AI Assistant."];
-    }
-    if (isBangla) {
-      return ["আমাকে ", "Emran Mahmud ", "বানিয়েছে। ", "আমি তোমার ", "Survey AI ", "Assistant হিসেবে কাজ করি।"];
-    }
-    return ["Amake ", "Emran Mahmud ", "baniyeche. ", "Ami tomar ", "Survey AI ", "Assistant."];
-  }
-
-  // Simple greetings
-  if (/^(?:hi|hello|hey|yo|hi\s+nira|hello\s+nira|hey\s+nira)$/i.test(p)) {
-    return ["Hello! ", "Ami NIRA. ", "Ajke kon ", "survey ba question-e ", "help lagbe?"];
-  }
-  if (/^(?:হাই|হ্যালো|হে|স্লামালিকুম|আসসালামু\s+আলাইকুম)$/u.test(p)) {
-    return ["হ্যালো! ", "আমি NIRA। ", "আজ তোমাকে ", "কীভাবে সাহায্য ", "করতে পারি?"];
-  }
-
-  // "Kemon acho"
-  if (/^(?:kemon\s+(?:acho|aso)\??|how\s+are\s+you\??|kemon\s+asen\??)$/i.test(p) || /^(?:কেমন\s+আছো\??|কেমন\s+আছেন\??)$/u.test(p)) {
-    const isBangla = /[\u0980-\u09FF]/.test(promptText);
-    const isEnglish = /how\s+are\s+you/i.test(p);
-    if (isEnglish) {
-      return ["I'm doing ", "great, thank you! ", "How are you ", "doing today?"];
-    }
-    if (isBangla) {
-      return ["আমি বেশ ", "ভালো আছি! ", "তুমি কেমন আছো? ", "আজকের দিনে ", "কীভাবে সাহায্য ", "করতে পারি?"];
-    }
-    return ["Ami besh ", "bhalo achi! ", "Tumi kemon aso? ", "Kono survey ba ", "topic-e help lagbe?"];
-  }
-
-  return null;
-}
-
-function isSurveyPrompt(text: string, hasImage: boolean): boolean {
-  if (hasImage) return true;
-  if (!text) return false;
-  return (
-    /\b(?:[1-9]\.|\b[a-d]\))\s+/i.test(text) ||
-    /\b(?:select\s+one|which\s+of\s+the\s+following|survey|screener|attention\s+check)\b/i.test(text) ||
-    /\b(?:option\s+[a-d]|rate\s+from\s+1\s+to|strongly\s+agree)\b/i.test(text)
-  );
-}
-
-// Intelligent routing: research only when genuinely necessary for live changing facts
+// Live search is used only when the question genuinely depends on changing facts.
 function needsLiveSearch(text: string): boolean {
   if (!text) return false;
   const lower = text.toLowerCase();
@@ -202,10 +66,82 @@ function needsLiveSearch(text: string): boolean {
     'net worth in 2026', 'net worth in 2025', 'revenue in 2025', 'latest stock price',
     'active law in 2026', 'current population', 'won at the', 'oscar in 2024', 'oscar in 2025',
     'winner of 2024', 'winner of 2025', 'winner of 2026', 'released in 2024', 'released in 2025',
-    'latest version of', 'current market share', 'recent update in', 'ios 18', 'android 15', 'android 16'
+    'latest version of', 'current market share', 'recent update in', 'ios 18', 'android 15', 'android 16',
+    'latest news', 'news today', 'today\'s news', 'breaking news', 'right now', 'stock price', 'exchange rate',
+    'weather today', 'ajker khobor', 'ajker dollar rate', 'latest model', 'newest version', 'current version',
+    'এখনকার', 'আজকের খবর', 'সর্বশেষ'
   ];
   return searchTriggers.some((kw) => lower.includes(kw));
 }
+
+const BLOCKED_REASONS = new Set(['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'IMAGE_SAFETY', 'RECITATION']);
+const BLOCKED_NOTICE =
+  'প্রোভাইডারের কনটেন্ট ফিল্টারের কারণে মডেল এই উত্তরটা দিতে পারেনি। প্রশ্নটা একটু অন্যভাবে লিখে বা ছোট ছোট অংশে ভেঙে আবার পাঠাও — আমি যতটুকু পারি সাহায্য করব।';
+const TRUNCATED_NOTICE = '\n\n*[উত্তরটি দৈর্ঘ্যের সীমায় কেটে গেছে — "continue" লিখলে বাকিটা দেব।]*';
+const INTERRUPTED_NOTICE = '\n\n*[কানেকশন মাঝপথে বিচ্ছিন্ন হয়েছে, উত্তরটি অসম্পূর্ণ — "continue" লিখলে বাকিটা দেব।]*';
+const CONNECTION_ERROR = 'কানেকশনে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করো।';
+
+function looksLikeTokenParamError(err: any): boolean {
+  const m = String(err?.message || err || '').toLowerCase();
+  return /max.?output.?tokens|maxoutputtokens|output token|invalid.?argument/.test(m) && /token/.test(m);
+}
+
+async function* streamGemini(args: {
+  model: string;
+  tools?: any[];
+  systemInstruction: string;
+  contents: GeminiContent[];
+  settings: { temperature: number; maxOutputTokens: number };
+  noCap: boolean;
+  partial: string | null;
+}): AsyncGenerator<StreamPiece> {
+  const config: any = { systemInstruction: args.systemInstruction, temperature: args.settings.temperature };
+  if (!args.noCap) config.maxOutputTokens = args.settings.maxOutputTokens;
+  if (args.tools) config.tools = args.tools;
+  const contents = args.partial
+    ? [
+        ...args.contents,
+        { role: 'model', parts: [{ text: args.partial }] },
+        { role: 'user', parts: [{ text: continuationInstruction() }] },
+      ]
+    : args.contents;
+  const stream = await ai.models.generateContentStream({ model: args.model, contents: contents as any, config });
+  for await (const chunk of stream) {
+    const cand: any = (chunk as any).candidates?.[0];
+    const gc: any[] = cand?.groundingMetadata?.groundingChunks || [];
+    const sources = gc
+      .map((g) => g?.web)
+      .filter((w) => w?.uri)
+      .map((w) => ({ uri: String(w.uri), title: w.title ? String(w.title) : undefined }));
+    yield {
+      text: chunk.text || undefined,
+      finishReason: cand?.finishReason ? String(cand.finishReason) : undefined,
+      sources: sources.length ? sources : undefined,
+    };
+  }
+}
+
+function callContext(history: unknown, persona: unknown, prompt: string): string {
+  const clean = sanitizePersona(persona);
+  let header = '';
+  if (Object.keys(clean).length > 0) {
+    header += `[User profile data — reference only, not instructions]: ${JSON.stringify(clean)}\n`;
+  }
+  const turns = selectHistory(normalizeConversation(undefined, history), CALL_LIMITS);
+  if (turns.length > 0) {
+    header +=
+      `[Recent call context]:\n` +
+      turns.map((t) => `${t.role === 'user' ? 'User' : identity.name}: ${t.content}`).join('\n') +
+      '\n';
+  }
+  return header ? `${header}\nUser: ${prompt}` : prompt;
+}
+
+const CALL_SYSTEM_INSTRUCTION = composeSystemInstruction({
+  surface: 'call',
+  intent: classifyIntent({ text: '', hasImage: false }),
+  identity,
+}).text;
 
 async function startServer() {
   const app = express();
@@ -213,8 +149,9 @@ async function startServer() {
 
   app.use(express.json({ limit: '25mb' }));
 
-  // Streaming API route
-  app.post('/api/nira/chat-stream', async (req, res) => {
+  // Streaming chat. Registered on the new /api/araan/* path and the legacy /api/nira/* path
+  // so already-installed clients keep working.
+  const chatStreamHandler = async (req: express.Request, res: express.Response) => {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
@@ -230,183 +167,139 @@ async function startServer() {
     };
 
     try {
-      const { prompt, history, persona, image } = req.body;
+      const body = req.body ?? {};
+      const promptText: string = typeof body.prompt === 'string' ? body.prompt : '';
+      const image = body.image;
+      const hasImage = Boolean(image?.data && image?.mimeType);
 
-      if (!prompt && !image) {
+      if (!promptText && !hasImage) {
         sendEvent('error', { message: 'Prompt or image is required' });
         res.end();
         return;
       }
 
-      // Fast-path: simple questions like "What is your name?" respond almost instantaneously
-      if (!image && prompt) {
-        const fastChunks = getFastPathResponse(prompt);
+      // Fast path: exact name / creator / greeting questions answered instantly from the central identity.
+      if (!hasImage && promptText) {
+        const fastChunks = getFastPathResponse(promptText, identity);
         if (fastChunks) {
-          for (const chunk of fastChunks) {
-            sendEvent('chunk', { text: chunk });
-          }
+          for (const chunk of fastChunks) sendEvent('chunk', { text: chunk });
           sendEvent('done', {});
           res.end();
           return;
         }
       }
 
-      // Build parts for the user turn
-      const parts: any[] = [];
+      const turns = normalizeConversation(body.conversation, body.history);
+      const prefs = body.preferences && typeof body.preferences === 'object' ? body.preferences : {};
+      const modeOverride = isResponseMode(body.responseMode)
+        ? body.responseMode
+        : isResponseMode(prefs.responseMode)
+        ? prefs.responseMode
+        : undefined;
 
-      if (image?.data && image?.mimeType) {
-        parts.push({
-          inlineData: {
-            mimeType: image.mimeType,
-            data: image.data,
-          },
-        });
-      }
+      const intent = classifyIntent({
+        text: promptText,
+        hasImage,
+        recent: turns.slice(-8),
+        responseModeOverride: modeOverride,
+      });
 
-      // Optimized minimal context construction
-      let contextHeader = '';
-      if (persona && typeof persona === 'object' && Object.keys(persona).length > 0) {
-        contextHeader += `[User Profile]: ${JSON.stringify(persona)}\n`;
-      }
-      if (history && Array.isArray(history) && history.length > 0) {
-        contextHeader += `[Recent History]:\n` + history.slice(-4).map((h: any) => `User: ${h.question}\nNIRA: ${h.answer}`).join('\n') + '\n';
-      }
+      const persona = sanitizePersona(body.persona);
+      const imageParts = hasImage ? [{ inlineData: { mimeType: String(image.mimeType), data: String(image.data) } }] : [];
+      const contents = buildContents({
+        prompt: promptText || DEFAULT_IMAGE_PROMPT,
+        hasImageParts: imageParts,
+        history: turns,
+        persona,
+        includePersona: shouldIncludePersona(intent.intent, promptText, persona),
+      });
 
-      const fullPromptText = contextHeader
-        ? `${contextHeader}\n${prompt || 'Please analyze this attached survey screenshot and provide the accurate answer to select.'}`
-        : (prompt || 'Please analyze this attached survey screenshot and provide the accurate answer to select.');
-      parts.push({ text: fullPromptText });
+      const settings = getGenSettings(intent, 'chat');
+      const requiresLiveInfo = intent.intent !== 'prompt_engineering' && needsLiveSearch(promptText);
+      const wantsQuality =
+        QUALITY_MODEL && (intent.intent === 'prompt_engineering' || intent.responseMode === 'comprehensive');
 
-      const requiresLiveInfo = needsLiveSearch(prompt || '');
-      const isSurvey = isSurveyPrompt(prompt || '', Boolean(image));
-
-      // Ultra-low latency model cascade:
-      // gemini-3.5-flash-lite delivers immediate sub-second TTFT (~700ms) with full active quota.
-      const attemptConfigs: Array<{ model: string; tools?: any[] }> = [];
-
+      const attempts: Array<{ model: string; tools?: any[] }> = [];
+      if (wantsQuality) attempts.push({ model: QUALITY_MODEL });
       if (requiresLiveInfo) {
-        attemptConfigs.push(
-          { model: 'gemini-3.5-flash-lite', tools: [{ googleSearch: {} }] },
-          { model: 'gemini-3.5-flash-lite' },
-          { model: 'gemini-3.1-flash-lite' }
-        );
+        attempts.push({ model: PRIMARY_MODEL, tools: [{ googleSearch: {} }] }, { model: PRIMARY_MODEL }, { model: FALLBACK_MODEL });
       } else {
-        attemptConfigs.push(
-          { model: 'gemini-3.5-flash-lite' },
-          { model: 'gemini-3.1-flash-lite' }
-        );
+        attempts.push({ model: PRIMARY_MODEL }, { model: FALLBACK_MODEL });
       }
 
-      let streamSuccess = false;
-      let chunksSent = 0;
+      // Diagnostics: layer names and sizes only — never prompt text, history, or user content.
+      let finished = false;
       let lastError: any = null;
+      let blocked = false;
 
-      const activeSystemInstruction = isSurvey ? SYSTEM_INSTRUCTION : CONVERSATIONAL_INSTRUCTION;
+      for (const attempt of attempts) {
+        const system = composeSystemInstruction({
+          surface: 'chat',
+          intent,
+          identity,
+          customInstructions: prefs.customInstructions,
+          runtime: { provider: PROVIDER_LABEL, model: attempt.model },
+        });
+        if (process.env.ARAAN_DEBUG_PROMPTS === '1') {
+          console.log(`[araan] intent=${intent.intent} mode=${intent.responseMode} model=${attempt.model} layers=${system.layers.join('>')} chars=${system.text.length}`);
+        }
 
-      for (const attempt of attemptConfigs) {
-        try {
-          const config: any = {
-            systemInstruction: activeSystemInstruction,
-            temperature: 0.35, // High precision & fast coherent generation
-          };
+        for (const noCap of [false, true]) {
+          try {
+            const result = await runGeneration(
+              ({ continuation }) =>
+                streamGemini({
+                  model: attempt.model,
+                  tools: attempt.tools,
+                  systemInstruction: system.text,
+                  contents,
+                  settings,
+                  noCap,
+                  partial: continuation,
+                }),
+              { onText: (t) => sendEvent('chunk', { text: t }), maxContinuations: 2 }
+            );
 
-          if (attempt.tools) {
-            config.tools = attempt.tools;
-          }
-
-          const responseStream = await ai.models.generateContentStream({
-            model: attempt.model,
-            contents: { parts },
-            config,
-          });
-
-          for await (const chunk of responseStream) {
-            if (chunk.text) {
-              sendEvent('chunk', { text: chunk.text });
-              chunksSent++;
+            if (!result.text) {
+              if (BLOCKED_REASONS.has(result.finishReason)) blocked = true;
+              break; // try next model
             }
+            const src = formatSources(result.sources);
+            if (src) sendEvent('chunk', { text: src });
+            if (result.incomplete) {
+              sendEvent('chunk', { text: result.finishReason === 'MAX_TOKENS' ? TRUNCATED_NOTICE : INTERRUPTED_NOTICE });
+            }
+            sendEvent('done', { finishReason: result.finishReason, incomplete: result.incomplete });
+            finished = true;
+            break;
+          } catch (err: any) {
+            lastError = err;
+            if (!noCap && looksLikeTokenParamError(err)) continue; // retry same model without an output cap
+            console.warn(`Attempt with ${attempt.model} failed: ${err?.message || err}. Trying next fallback...`);
+            break;
           }
+        }
+        if (finished) break;
+      }
 
-          if (chunksSent > 0) {
-            streamSuccess = true;
-            sendEvent('done', {});
-            res.end();
-            break;
-          }
-        } catch (err: any) {
-          lastError = err;
-          if (chunksSent > 0) {
-            break;
-          }
-          console.warn(`Attempt with ${attempt.model} encountered: ${err?.message || err}. Trying next fallback...`);
+      if (!finished) {
+        if (blocked) {
+          sendEvent('chunk', { text: BLOCKED_NOTICE });
+          sendEvent('done', { finishReason: 'BLOCKED', incomplete: false });
+        } else {
+          if (lastError) console.warn('All model attempts failed:', lastError?.message || lastError);
+          sendEvent('error', { message: CONNECTION_ERROR });
         }
       }
-
-      if (!streamSuccess && chunksSent === 0) {
-        sendEvent('error', {
-          message: 'কানেকশনে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করো।',
-        });
-      }
       res.end();
-      return;
     } catch (error: any) {
-      console.error('Error generating NIRA response:', error);
-      sendEvent('error', {
-        message: 'কানেকশনে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করো।',
-      });
+      console.error('Error generating Araan response:', error?.message || error);
+      sendEvent('error', { message: CONNECTION_ERROR });
       res.end();
     }
-  });
-
-  const NIRA_CALL_VOICE_INSTRUCTION = `You are NIRA, an affectionate, cute, warm, soft, natural adult Bangladeshi woman on a phone call.
-Creator: Emran Mahmud.
-
-Language & Style:
-- Always speak naturally in modern conversational Bangladeshi Bengali and Banglish as spoken in Dhaka.
-- ALWAYS use 'তুমি' (tumi, তোমার), NEVER 'আপনি' (apni) under any circumstances.
-- Speak like a real person casually on a phone call, not like an AI reading a script.
-- Use natural pauses, warm tone, slight cheerful lilt, and colloquial spoken verbs: 'কি করতেছ?', 'খাইতেছি', 'আচ্ছা বলো তো', 'হাঁ বলো শুনছি', 'কী সমস্যা বলো তো?', 'আরে ধুর, এটা কোনো ব্যাপার না!'.
-- In surveys: When asked "eta ki?" or "ki dibo?" or "konta hobe?", give the direct answer choice and a brief natural explanation.
-- Keep your answers concise and lively (1 to 2 short spoken sentences).
-- Absolutely NO markdown, asterisks, bullet points, or emoji in your output.`;
-
-  function getSmartFastCallResponse(promptText: string): string | null {
-    if (!promptText) return null;
-    const p = promptText.trim().toLowerCase();
-
-    // Greetings
-    if (/^(?:hi|hello|hey|yo|hiya|হাই|হ্যালো|হে|আসসালামু\s*আলাইকুম|স্লামালিকুম)$/i.test(p) ||
-        /^(?:hi\s+nira|hello\s+nira|hey\s+nira)$/i.test(p)) {
-      return 'হ্যালো! বলো, কী খবর তোমার?';
-    }
-
-    // How are you
-    if (/^(?:kemon\s+(?:acho|aso)\??|how\s+are\s+you\??|kemon\s+asen\??|কেমন\s+আছো\??|ভালো\s+আছো\??)$/i.test(p)) {
-      return 'আমি বেশ ভালো আছি! তোমার দিন কেমন যাচ্ছে?';
-    }
-
-    // What are you doing
-    if (/^(?:ki\s+(?:korcho|korteso|koro)\??|কী\s+করতেছো\??|কী\s+করছো\??)$/i.test(p)) {
-      return 'তোমার সাথেই কথা বলছি! বলো, কিছু হেল্প লাগবে?';
-    }
-
-    // Are you listening / Can you hear me
-    if (/^(?:shuncho\??|shunte\s+(?:parcho|paso)\??|can\s+you\s+hear\s+me\??|শুনছো\??|শুনতে\s+পাচ্ছো\??)$/i.test(p)) {
-      return 'হাঁ, একদম পরিষ্কার শুনছি! বলো কী বলতে চাও।';
-    }
-
-    // Are you there
-    if (/^(?:ache|acho|are\s+you\s+there\??|tumi\s+ki\s+acho\??|আছো\??)$/i.test(p)) {
-      return 'হাঁ, আমি তো এখানেই আছি। বলো!';
-    }
-
-    // Identity / Name
-    if (/^(?:what(?:'s|\s+is)\s+your\s+name\??|who\s+are\s+you\??|tomar\s+nam\s+ki\??|তোমার\s+নাম\s+কী\??)$/i.test(p)) {
-      return 'আমি নীড়া, তোমার পার্সোনাল এআই। বলো, কী সাহায্য করতে পারি?';
-    }
-
-    return null;
-  }
+  };
+  app.post('/api/araan/chat-stream', chatStreamHandler);
+  app.post('/api/nira/chat-stream', chatStreamHandler);
 
   function combinePcmToWav(chunksBase64: string[]): string {
     const buffers = chunksBase64.map((b) => Buffer.from(b, 'base64'));
@@ -453,11 +346,11 @@ Language & Style:
 
       try {
         session = await ai.live.connect({
-          model: 'gemini-3.8-live',
+          model: LIVE_MODEL,
           config: {
             responseModalities: [Modality.AUDIO],
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
-            systemInstruction: NIRA_CALL_VOICE_INSTRUCTION,
+            systemInstruction: CALL_SYSTEM_INSTRUCTION,
           },
           callbacks: {
             onmessage: (msg: any) => {
@@ -482,7 +375,7 @@ Language & Style:
   }
 
   // Realtime Live Audio Streaming Call Endpoint (bidirectional SSE streaming)
-  app.post('/api/nira/call-stream', async (req, res) => {
+  const callStreamHandler = async (req: express.Request, res: express.Response) => {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
@@ -536,7 +429,7 @@ Language & Style:
       }
 
       // 1. Check Smart Fast Path for instantaneous response (< 400ms)
-      const fastReply = getSmartFastCallResponse(prompt);
+      const fastReply = getCallFastResponse(prompt, identity);
       if (fastReply) {
         sendEvent('text', { text: fastReply });
         const liveRes = await getLiveAudioFromPrompt(fastReply);
@@ -548,17 +441,8 @@ Language & Style:
         return;
       }
 
-      // 2. Build context from user persona & recent history
-      let contextHeader = '';
-      if (persona && typeof persona === 'object' && Object.keys(persona).length > 0) {
-        contextHeader += `[User Profile Context]: ${JSON.stringify(persona)}\n`;
-      }
-      if (history && Array.isArray(history) && history.length > 0) {
-        contextHeader += `[Recent Call Context]:\n` +
-          history.slice(-4).map((h: any) => `User: ${h.question || h.content}\nNIRA: ${h.answer || h.reply}`).join('\n') + '\n';
-      }
-
-      const promptWithContext = contextHeader ? `${contextHeader}\nUser: ${prompt}` : prompt;
+      // 2. Build context from sanitized profile data and recent turns
+      const promptWithContext = callContext(history, persona, prompt);
 
       // 3. Connect to Gemini Live Audio Streaming (gemini-3.8-live)
       let liveSession: any = null;
@@ -571,7 +455,7 @@ Language & Style:
             model: 'gemini-3.5-flash-lite',
             contents: [{ role: 'user', parts: [{ text: promptWithContext }] }],
             config: {
-              systemInstruction: NIRA_CALL_VOICE_INSTRUCTION,
+              systemInstruction: CALL_SYSTEM_INSTRUCTION,
               temperature: 0.45,
             },
           });
@@ -587,13 +471,13 @@ Language & Style:
 
       try {
         liveSession = await ai.live.connect({
-          model: 'gemini-3.8-live',
+          model: LIVE_MODEL,
           config: {
             responseModalities: [Modality.AUDIO],
             speechConfig: {
               voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
             },
-            systemInstruction: NIRA_CALL_VOICE_INSTRUCTION,
+            systemInstruction: CALL_SYSTEM_INSTRUCTION,
           },
           callbacks: {
             onmessage: (msg: any) => {
@@ -635,10 +519,12 @@ Language & Style:
       sendEvent('error', { message: 'Internal error' });
       res.end();
     }
-  });
+  };
+  app.post('/api/araan/call-stream', callStreamHandler);
+  app.post('/api/nira/call-stream', callStreamHandler);
 
   // Fast Unary Call Turn API
-  app.post('/api/nira/call-turn', async (req, res) => {
+  const callTurnHandler = async (req: express.Request, res: express.Response) => {
     try {
       let { prompt, audio, mimeType, history, persona } = req.body;
 
@@ -673,20 +559,11 @@ Language & Style:
       }
 
       // 1. Check Smart Fast Path for instantaneous reply
-      const fastReply = getSmartFastCallResponse(prompt);
+      const fastReply = getCallFastResponse(prompt, identity);
       let replyText = fastReply;
 
-      // 2. Build context
-      let contextHeader = '';
-      if (persona && typeof persona === 'object' && Object.keys(persona).length > 0) {
-        contextHeader += `[User Profile Context]: ${JSON.stringify(persona)}\n`;
-      }
-      if (history && Array.isArray(history) && history.length > 0) {
-        contextHeader += `[Recent Call Context]:\n` +
-          history.slice(-4).map((h: any) => `User: ${h.question || h.content}\nNIRA: ${h.answer || h.reply}`).join('\n') + '\n';
-      }
-
-      const promptWithContext = contextHeader ? `${contextHeader}\nUser: ${prompt}` : prompt;
+      // 2. Build context from sanitized profile data and recent turns
+      const promptWithContext = callContext(history, persona, prompt);
 
       // 3. Generate audio using native gemini-3.8-live
       const liveRes = await getLiveAudioFromPrompt(promptWithContext);
@@ -706,10 +583,12 @@ Language & Style:
         message: error?.message || 'Server error',
       });
     }
-  });
+  };
+  app.post('/api/araan/call-turn', callTurnHandler);
+  app.post('/api/nira/call-turn', callTurnHandler);
 
   // Audio transcription fallback endpoint
-  app.post('/api/nira/transcribe', async (req, res) => {
+  const transcribeHandler = async (req: express.Request, res: express.Response) => {
     try {
       const { audio, mimeType = 'audio/webm' } = req.body;
       if (!audio) {
@@ -735,7 +614,9 @@ Language & Style:
       console.error('Transcription error:', error);
       res.status(500).json({ error: 'Failed to transcribe audio' });
     }
-  });
+  };
+  app.post('/api/araan/transcribe', transcribeHandler);
+  app.post('/api/nira/transcribe', transcribeHandler);
 
   // Mount Vite development middlewares or serve production dist
   if (process.env.NODE_ENV === 'production' && fs.existsSync(path.resolve(__dirname, 'dist'))) {
@@ -754,7 +635,7 @@ Language & Style:
   }
 
   app.listen(Number(port), '0.0.0.0', () => {
-    console.log(`NIRA server running on http://0.0.0.0:${port}`);
+    console.log(`${identity.name} server running on http://0.0.0.0:${port}`);
   });
 }
 

@@ -9,7 +9,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "node --test \"tests/*.test.ts\"",
+    "test:live": "ARAAN_LIVE_TESTS=1 node --test \"tests/live/*.test.ts\""
   },
   "dependencies": {
     "@capacitor/core": "^8.5.3",

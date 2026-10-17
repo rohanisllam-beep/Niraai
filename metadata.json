@@ -1,6 +1,6 @@
 {
-  "name": "NIRA - Survey God AI Assistant",
-  "description": "Advanced AI survey intelligence assistant by Emran Mahmud. Understands survey questions, choices, context, screenshots, and follow-ups in English, Bangla, and Banglish.",
+  "name": "Araan - AI Assistant",
+  "description": "Advanced AI AI assistant for survey analysis, coding, and prompt engineering. Understands survey questions, choices, context, screenshots, and follow-ups in English, Bangla, and Banglish.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
