@@ -1,21 +1,93 @@
 <!doctype html>
-<html lang="en" class="w-full max-w-full overflow-x-hidden">
+<html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>NIRA - Survey God AI Assistant</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Araan" />
+    <title>Araan</title>
     <meta name="description" content="Advanced AI survey intelligence assistant by Emran Mahmud. Understands survey questions, choices, context, screenshots, and follow-ups in English, Bangla, and Banglish." />
-    <meta property="og:title" content="NIRA - Survey God AI Assistant" />
+    <meta property="og:title" content="Araan" />
     <meta property="og:description" content="Advanced AI survey intelligence assistant by Emran Mahmud. Understands survey questions, choices, context, screenshots, and follow-ups in English, Bangla, and Banglish." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
-  <body class="bg-[#f8fafc] text-slate-900 antialiased selection:bg-rose-500/30 selection:text-rose-700 w-full max-w-full overflow-x-hidden min-h-screen m-0 p-0">
-    <div id="root" class="w-full max-w-full overflow-x-hidden min-h-screen"></div>
+  <body>
+    <div id="stage">
+      <div id="frame">
+        <div id="root"></div>
+        <div id="sysui">
+          <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+          <div class="island"></div>
+          <div class="hb"></div>
+        </div>
+      </div>
+    </div>
+    <div id="pv" role="toolbar" aria-label="Preview options">
+      <button data-d="0" aria-pressed="true">iPhone 14</button>
+      <button data-d="1" aria-pressed="false">Pixel 8</button>
+      <button data-d="2" aria-pressed="false">Galaxy S</button>
+      <button data-d="3" aria-pressed="false">iPhone SE</button>
+      <span class="sep"></span>
+      <button id="sample">Insert sample question</button>
+    </div>
+    <div id="note">Your real project code running on live Gemini AI backend.</div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      (function(){
+        var DEV=[{w:390,h:844,st:47,sb:34},{w:412,h:915,st:36,sb:24},{w:360,h:800,st:32,sb:16},{w:375,h:667,st:20,sb:0}];
+        var f=document.getElementById('frame'),cur=0;
+        function fit(){
+          if(!f) return;
+          var d=DEV[cur];
+          f.style.setProperty('--w',d.w+'px');
+          f.style.setProperty('--h',d.h+'px');
+          f.style.setProperty('--fst',d.st+'px');
+          f.style.setProperty('--fsb',d.sb+'px');
+          var s=Math.min(1,(innerHeight-64)/d.h,(innerWidth-32)/d.w);
+          f.style.setProperty('--s',s);
+          var isl=f.querySelector('.island');
+          if(isl) isl.style.display=d.st>40?'block':'none';
+        }
+        document.querySelectorAll('#pv [data-d]').forEach(function(b){
+          b.onclick=function(){
+            cur=+b.dataset.d;
+            document.querySelectorAll('#pv [data-d]').forEach(function(o){o.setAttribute('aria-pressed',o===b)});
+            fit();
+          };
+        });
+        window.addEventListener('resize',fit);
+        fit();
+        var smp = document.getElementById('sample');
+        if(smp) {
+          smp.onclick=function(){
+            var ta=document.querySelector('.araan-input');
+            if(!ta||ta.disabled) return;
+            var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value')?.set;
+            if (nativeSetter) {
+              nativeSetter.call(ta, 'Survey: How old are you currently?\nA) 18–24\nB) 25–34\nC) 35–44');
+            } else {
+              ta.value = 'Survey: How old are you currently?\nA) 18–24\nB) 25–34\nC) 35–44';
+            }
+            ta.dispatchEvent(new Event('input',{bubbles:true}));
+            ta.focus();
+          };
+        }
+        if('serviceWorker' in navigator) {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js').catch(function(){});
+          });
+        }
+      })();
+    </script>
   </body>
 </html>
-

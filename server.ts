@@ -753,8 +753,8 @@ Language & Style:
     app.use(vite.middlewares);
   }
 
-  app.listen(port, () => {
-    console.log(`NIRA server running on port ${port}`);
+  app.listen(Number(port), '0.0.0.0', () => {
+    console.log(`NIRA server running on http://0.0.0.0:${port}`);
   });
 }
 

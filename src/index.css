@@ -2,26 +2,63 @@
 
 @layer base {
   :root {
-    --bg-prismatic-surface: #f8fafc;
-    --prismatic-glass-bg: rgba(255, 255, 255, 0.88);
-    --prismatic-glass-border: rgba(255, 255, 255, 0.95);
+    --bg-prismatic-surface: #000000;
+    --prismatic-glass-bg: rgba(17, 18, 22, 0.94);
+    --prismatic-glass-border: rgba(255, 255, 255, 0.14);
+
+    /* Arctic Silver Palette (NO PURPLE) */
+    --color-violet-100: rgb(238 242 248);
+    --color-violet-200: rgb(224 230 241);
+    --color-violet-300: rgb(208 218 234);
+    --color-violet-400: rgb(162 175 197);
+    --color-violet-500: rgb(132 146 172);
+    --color-violet-600: rgb(110 121 145);
+    --color-violet-700: rgb(88 97 118);
+    --color-fuchsia-200: rgb(217 212 244);
+    --color-fuchsia-300: rgb(198 190 240);
+    --color-fuchsia-400: rgb(186 176 236);
+    --color-fuchsia-600: rgb(141 137 182);
+    --color-fuchsia-700: rgb(116 114 153);
+    --color-amber-100: rgb(251 252 254);
+    --color-amber-200: rgb(255 255 255);
+    --color-amber-300: rgb(241 239 251);
+
+    --araan-glow-1: rgb(102 111 128);
+    --araan-glow-2: rgb(52 57 71);
+    --araan-glow-3: rgb(22 24 31);
+    --araan-bloom: rgba(186, 176, 236, 0.1);
+    --araan-name: rgb(217 225 238);
+    --araan-ico: rgb(222 229 240);
+    --araan-title-end: rgb(165 170 185);
+    --araan-line: rgba(208, 218, 234, 0.42);
+    --araan-tint-a: rgba(132, 146, 172, 0.18);
+    --araan-tint-b: rgba(186, 176, 236, 0.1);
+    --araan-shadow: rgba(132, 146, 172, 0.2);
+    --araan-chip-bg: rgba(208, 218, 234, 0.15);
+    --araan-chip-fg: rgb(229 235 244);
+    --araan-label-a: rgb(227 233 242);
+    --araan-label-b: rgb(217 212 245);
+    --araan-label-c: rgb(255 255 255);
+    --araan-cursor: rgb(208 218 234);
+    --araan-surface-a: rgba(32, 35, 45, 0.95);
+    --araan-surface-b: rgba(8, 9, 11, 0.98);
+    --araan-end: rgb(148 142 190);
   }
 
-  html, body, #root {
+  html, body {
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow: hidden;
     margin: 0;
     padding: 0;
-    background-color: #f8fafc;
-  }
-
-  body {
-    font-family: 'Plus Jakarta Sans', 'Noto Sans Bengali', system-ui, -apple-system, sans-serif;
-    color: #0f172a;
-    min-height: 100vh;
+    background-color: #050507;
+    height: 100%;
+    height: 100dvh;
+    color: #fff;
+    font-family: 'Inter Tight', 'Plus Jakarta Sans', 'Noto Sans Bengali', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -34,125 +71,7 @@
   font-feature-settings: 'cv01' on, 'ss01' on, 'liga' on;
 }
 
-/* Fluid transition container for background & mesh */
-.liquid-bg-transition {
-  transition: background 2.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.liquid-orb-transition {
-  transition: background 2.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 2.5s ease;
-}
-
-/* Prismatic animated liquid mesh background */
-.liquid-bg-mesh {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  max-width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-  overflow: hidden;
-}
-
-.prismatic-orb-1 {
-  position: absolute;
-  top: -10%;
-  left: 8%;
-  width: 55vw;
-  height: 55vw;
-  max-width: 680px;
-  max-height: 680px;
-  filter: blur(85px);
-  background: radial-gradient(circle, rgba(254, 205, 211, 0.45) 0%, rgba(255, 228, 230, 0.12) 60%, transparent 80%);
-  animation: floatOrb1 22s ease-in-out infinite alternate;
-}
-
-.prismatic-orb-2 {
-  position: absolute;
-  top: 30%;
-  right: -5%;
-  width: 50vw;
-  height: 50vw;
-  max-width: 620px;
-  max-height: 620px;
-  filter: blur(90px);
-  background: radial-gradient(circle, rgba(254, 243, 199, 0.4) 0%, rgba(253, 230, 138, 0.1) 60%, transparent 80%);
-  animation: floatOrb2 26s ease-in-out infinite alternate;
-}
-
-.prismatic-orb-3 {
-  position: absolute;
-  bottom: -12%;
-  left: 20%;
-  width: 60vw;
-  height: 60vw;
-  max-width: 720px;
-  max-height: 720px;
-  filter: blur(95px);
-  background: radial-gradient(circle, rgba(224, 231, 255, 0.45) 0%, rgba(219, 234, 254, 0.12) 60%, transparent 80%);
-  animation: floatOrb3 24s ease-in-out infinite alternate;
-}
-
-@keyframes floatOrb1 {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(45px, 35px) scale(1.08); }
-  100% { transform: translate(-35px, 65px) scale(0.95); }
-}
-
-@keyframes floatOrb2 {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-55px, -45px) scale(1.1); }
-  100% { transform: translate(35px, -25px) scale(0.92); }
-}
-
-@keyframes floatOrb3 {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(65px, -35px) scale(1.05); }
-  100% { transform: translate(-45px, -55px) scale(0.96); }
-}
-
-/* Prismatic Glassmorphism Styles */
-.prismatic-glass {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 
-    0 16px 40px -10px rgba(0, 0, 0, 0.06),
-    inset 0 2px 4px 0 rgba(255, 255, 255, 0.95);
-}
-
-/* Nira Eye Blink Animation */
-@keyframes eyeBlink {
-  0%, 94%, 98%, 100% {
-    transform: scaleY(1);
-  }
-  96% {
-    transform: scaleY(0.08);
-  }
-}
-
-.nira-eye {
-  transform-origin: center;
-  animation: eyeBlink 4.2s infinite ease-in-out;
-}
-
-/* Gentle character breathing/hover */
-@keyframes niraFloat {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-3px) rotate(0.8deg);
-  }
-}
-
-.nira-character-anim {
-  animation: niraFloat 3.6s ease-in-out infinite;
-}
-
-/* Custom light scrollbar */
+/* Custom silver/charcoal scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -161,9 +80,531 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.35);
+  background: rgba(186, 176, 236, 0.24);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.55);
+  background: rgba(208, 218, 234, 0.45);
+}
+
+/* ===== Araan =====
+   Mobile-first. Colours come from Arctic Silver theme (charcoal, icy silver, pearl white). */
+.araan-root {
+  /* safe areas: the status bar / camera cutout above, the gesture bar below */
+  --st: env(safe-area-inset-top, 0px);
+  --sb: env(safe-area-inset-bottom, 0px);
+  --sl: env(safe-area-inset-left, 0px);
+  --sr: env(safe-area-inset-right, 0px);
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  color: #fff;
+  background: #000;
+  font-family: 'Inter Tight', 'Noto Sans Bengali', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+/* Full-screen overlays (the call screen) reuse .araan-root's look, but must sit on top of the app, not in the flow */
+.araan-root.araan-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+/* Arctic Silver glowing background: rising soft silver-charcoal radial mesh (no purple) */
+.araan-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 22% at 50% 104%, var(--araan-bloom, rgba(186, 176, 236, 0.1)), transparent 70%),
+    radial-gradient(120% 55% at 50% 108%, var(--araan-glow-1, rgb(102, 111, 128)) 0%, var(--araan-glow-2, rgb(52, 57, 71)) 26%, var(--araan-glow-3, rgb(22, 24, 31)) 52%, transparent 76%);
+}
+
+.araan-col {
+  position: relative;
+  height: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.araan-tools {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  gap: 0;
+  right: max(6px, var(--sr));
+  top: max(6px, var(--st));
+}
+
+/* 44px touch targets */
+.araan-icon-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  color: var(--araan-ico, #d0daea);
+  transition: background 0.2s, color 0.2s;
+}
+
+.araan-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.araan-icon-btn:active {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.araan-icon-btn:focus-visible,
+.araan-call-btn:focus-visible {
+  outline: 2px solid var(--araan-ico, #d0daea);
+  outline-offset: 2px;
+}
+
+.araan-badge {
+  position: absolute;
+  top: 5px;
+  right: 3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 9999px;
+  background: var(--araan-cursor, #d0daea);
+  color: #0b0716;
+  font: 600 9px/15px system-ui;
+  text-align: center;
+}
+
+.araan-entity {
+  --k: 1;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--st) + 44px);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transform: scale(var(--k));
+  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.araan-entity canvas {
+  pointer-events: auto;
+  cursor: pointer;
+  max-width: 100vw;
+}
+
+.araan-entity.is-compact {
+  transform: translateY(-70px) scale(calc(0.42 * var(--k)));
+}
+
+.araan-hero {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--st) + 268px);
+  padding: 0 24px;
+  text-align: center;
+  transition: opacity 0.6s, filter 0.6s, transform 0.6s;
+}
+
+.araan-hero.is-gone {
+  opacity: 0;
+  filter: blur(16px);
+  transform: translateY(-14px);
+  pointer-events: none;
+}
+
+.araan-name {
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  color: var(--araan-name, #d0daea);
+  opacity: 0.85;
+}
+
+.araan-title {
+  margin-top: 12px;
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  background: linear-gradient(180deg, #fff 30%, var(--araan-title-end, #a5aab9));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.araan-thread {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: calc(max(26px, var(--sb) + 16px) + 78px);
+  padding: calc(var(--st) + 128px) max(18px, var(--sl)) 12px max(18px, var(--sr));
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s 0.15s;
+}
+
+.araan-thread > * {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.araan-thread::-webkit-scrollbar {
+  display: none;
+}
+
+.araan-thread.is-on {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.araan-dock {
+  position: absolute;
+  z-index: 3;
+  left: max(18px, var(--sl));
+  right: max(18px, var(--sr));
+  bottom: max(26px, calc(var(--sb) + 16px));
+}
+
+.araan-capsule {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 54px;
+  padding: 0 5px 0 20px;
+  border-radius: 9999px;
+  background: rgba(17, 18, 22, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  transition: border-color 0.2s;
+}
+
+.araan-capsule:focus-within {
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+.araan-capsule .araan-icon-btn {
+  color: rgba(232, 233, 238, 0.7);
+}
+
+.araan-capsule .araan-icon-btn:hover {
+  color: #e8e9ee;
+}
+
+.araan-input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0;
+  line-height: 24px;
+  resize: none;
+  overflow: hidden;
+  background: none;
+  border: 0;
+  outline: 0;
+  color: #e8e9ee;
+  caret-color: #c9ccd6;
+  font: inherit;
+  font-size: 16px;
+}
+
+.araan-input::placeholder {
+  color: rgba(232, 233, 238, 0.5);
+}
+
+.araan-send,
+.araan-send:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #e8e9ee;
+}
+
+.araan-send:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.araan-capsule-busy {
+  justify-content: center;
+  width: 190px;
+  margin: 0 auto;
+  gap: 12px;
+  padding: 0;
+  font-size: 16px;
+}
+
+.araan-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.araan-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  animation: araanDot 1s infinite;
+}
+
+.araan-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.araan-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes araanDot {
+  50% {
+    opacity: 0.25;
+    transform: translateY(-2px);
+  }
+}
+
+.araan-call-btn {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: transform 0.15s;
+}
+
+.araan-call-btn:active {
+  transform: scale(0.95);
+}
+
+.araan-call-end {
+  width: 64px;
+  height: 64px;
+  background: var(--araan-end, #948ebe);
+  border: 0;
+}
+
+.dark-liquid-glass {
+  background: linear-gradient(
+    180deg,
+    var(--araan-surface-a, rgba(32, 35, 45, 0.95)),
+    var(--araan-surface-b, rgba(8, 9, 11, 0.98))
+  );
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+@media (max-height: 700px) {
+  .araan-entity {
+    --k: 0.84;
+    top: calc(var(--st) + 34px);
+  }
+  .araan-hero {
+    top: calc(var(--st) + 238px);
+  }
+  .araan-title {
+    font-size: 32px;
+  }
+}
+
+@media (max-height: 580px) {
+  .araan-entity {
+    --k: 0.68;
+    top: calc(var(--st) + 22px);
+  }
+  .araan-hero {
+    top: calc(var(--st) + 198px);
+  }
+  .araan-title {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 340px) {
+  .araan-title {
+    font-size: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .araan-entity,
+  .araan-hero,
+  .araan-thread,
+  .araan-dots i {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ===== Exact Claude Mobile Frame & Stage Styles ===== */
+#stage {
+  height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(60% 60% at 50% 40%, #12121a, #050507);
+  padding-top: 0;
+}
+
+#frame {
+  position: relative;
+  width: var(--w, 390px);
+  height: var(--h, 844px);
+  transform: scale(var(--s, 1));
+  transform-origin: center;
+  border-radius: 46px;
+  overflow: hidden;
+  box-shadow: 0 0 0 7px #17171d, 0 0 0 8px #2b2b36, 0 40px 80px -20px #000;
+  --fst: 47px;
+  --fsb: 34px;
+  background: #000;
+}
+
+#frame #root {
+  height: 100%;
+  min-height: 0;
+}
+
+#frame .araan-root {
+  height: 100% !important;
+  --st: var(--fst);
+  --sb: var(--fsb);
+}
+
+#sysui {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+}
+
+#sysui .sbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--fst);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 28px;
+  font: 600 13px system-ui;
+  opacity: 0.9;
+}
+
+#sysui .island {
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  width: 104px;
+  height: 30px;
+  margin-left: -52px;
+  border-radius: 20px;
+  background: #000;
+  border: 1px solid #1d1d24;
+}
+
+#sysui .hb {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  width: 128px;
+  height: 5px;
+  margin-left: -64px;
+  border-radius: 5px;
+  background: #fff;
+  opacity: 0.85;
+}
+
+#pv {
+  position: fixed;
+  z-index: 99;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 99px;
+  background: rgba(18, 18, 26, 0.86);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font: 500 12px system-ui;
+  white-space: nowrap;
+  max-width: 96vw;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+#pv button {
+  padding: 7px 11px;
+  border-radius: 99px;
+  color: #cdd1de;
+  transition: all 0.2s ease;
+}
+
+#pv button[aria-pressed="true"] {
+  background: #fff;
+  color: #111;
+}
+
+#pv .sep {
+  width: 1px;
+  height: 16px;
+  background: #3a3a4a;
+  flex: none;
+}
+
+#note {
+  position: fixed;
+  z-index: 99;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  text-align: center;
+  font: 11px system-ui;
+  color: #7d8196;
+  pointer-events: none;
+  padding: 0 12px;
+}
+
+/* On mobile screens / phones / standalone PWA mode, eliminate the simulated desktop frame and render 100% full screen */
+@media (max-width: 520px) {
+  #stage {
+    display: block;
+    background: #000;
+  }
+  #frame {
+    width: 100vw;
+    height: 100dvh;
+    transform: none !important;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  #frame .araan-root {
+    height: 100dvh !important;
+    --st: env(safe-area-inset-top, 0px);
+    --sb: env(safe-area-inset-bottom, 0px);
+  }
+  #sysui,
+  #pv,
+  #note {
+    display: none !important;
+  }
 }

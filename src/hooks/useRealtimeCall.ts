@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { CallState } from '../components/NanoLiquidVoiceCore';
+import { EntityState } from '../components/AraanEntity';
+
+export type CallState = EntityState;
 
 export interface CallTurnMessage {
   id: string;

@@ -25,14 +25,12 @@ export const ChatHistoryDrawer: React.FC<ChatHistoryDrawerProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-start bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-sm h-full flex flex-col dark-liquid-glass border-r border-rose-500/20 shadow-2xl overflow-hidden text-slate-200">
-        {/* Top Liquid Highlight */}
-        <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-rose-500/40 to-transparent pointer-events-none" />
+      <div className="relative w-full max-w-sm h-full flex flex-col dark-liquid-glass border-r border-violet-500/20 shadow-2xl overflow-hidden text-slate-200">
+        <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-violet-500/40 to-transparent pointer-events-none" />
 
-        {/* Header */}
         <div className="p-4 sm:p-5 border-b border-white/[0.08] flex items-center justify-between bg-black/40">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-2xl bg-rose-500/15 text-rose-300 border border-rose-500/30">
+            <div className="p-2 rounded-2xl bg-violet-500/15 text-violet-300 border border-violet-500/30">
               <MessageSquare className="w-4 h-4" />
             </div>
             <div>
@@ -52,20 +50,18 @@ export const ChatHistoryDrawer: React.FC<ChatHistoryDrawerProps> = ({
           </button>
         </div>
 
-        {/* New Chat Button */}
         <div className="p-4 border-b border-white/[0.06] bg-white/[0.01]">
           <button
             onClick={() => {
               onNewChat();
               onClose();
             }}
-            className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-rose-600 to-red-700 hover:opacity-95 text-white text-xs font-semibold flex items-center justify-center gap-2 border border-rose-500/30 shadow-md transition-all active:scale-[0.98]"
+            className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-700 hover:opacity-95 text-white text-xs font-semibold flex items-center justify-center gap-2 border border-violet-500/30 shadow-md transition-all active:scale-[0.98]"
           >
             <Plus className="w-4 h-4" /> Start New Chat
           </button>
         </div>
 
-        {/* Sessions List */}
         <div className="p-3 overflow-y-auto flex-1 space-y-2">
           {sessions.length === 0 ? (
             <div className="p-6 text-center text-xs text-slate-400 space-y-1">
@@ -91,8 +87,8 @@ export const ChatHistoryDrawer: React.FC<ChatHistoryDrawerProps> = ({
                   }}
                   className={`group relative flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer border ${
                     isActive
-                      ? 'bg-rose-500/15 border-rose-500/40 text-white shadow-sm'
-                      : 'bg-black/35 hover:bg-black/60 border-white/[0.05] hover:border-rose-500/20 text-slate-300'
+                      ? 'bg-violet-500/15 border-violet-500/40 text-white shadow-sm'
+                      : 'bg-black/35 hover:bg-black/60 border-white/[0.05] hover:border-violet-500/20 text-slate-300'
                   }`}
                 >
                   <div className="flex-1 min-w-0 pr-2">
@@ -111,7 +107,7 @@ export const ChatHistoryDrawer: React.FC<ChatHistoryDrawerProps> = ({
                       e.stopPropagation();
                       onDeleteSession(session.id);
                     }}
-                    className="p-1.5 rounded-lg opacity-40 hover:opacity-100 hover:bg-rose-500/20 hover:text-rose-300 transition-all text-slate-400"
+                    className="p-1.5 rounded-lg opacity-40 hover:opacity-100 hover:bg-violet-500/20 hover:text-violet-300 transition-all text-slate-400"
                     title="Delete Chat"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -122,10 +118,9 @@ export const ChatHistoryDrawer: React.FC<ChatHistoryDrawerProps> = ({
           )}
         </div>
 
-        {/* Footer */}
         <div className="p-3.5 border-t border-white/[0.08] bg-black/40 text-center">
           <p className="text-[10px] text-slate-500">
-            NIRA preserves context automatically across reloads.
+            Araan preserves context automatically across reloads.
           </p>
         </div>
       </div>

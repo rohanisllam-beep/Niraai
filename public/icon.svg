@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1e222d"/>
+      <stop offset="60%" stop-color="#0a0c10"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="silverOrb" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#d0daea"/>
+      <stop offset="70%" stop-color="#8492ac"/>
+      <stop offset="100%" stop-color="#3a4052"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="45%">
+      <stop offset="0%" stop-color="rgba(208, 218, 234, 0.45)"/>
+      <stop offset="50%" stop-color="rgba(132, 146, 172, 0.2)"/>
+      <stop offset="100%" stop-color="rgba(58, 64, 82, 0)"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#d0daea" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#8492ac" stop-opacity="0.7"/>
+    </linearGradient>
+  </defs>
+  
+  <rect width="512" height="512" rx="128" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="210" fill="url(#glow)"/>
+  <circle cx="256" cy="256" r="160" stroke="url(#ring)" stroke-width="4" fill="none"/>
+  <circle cx="256" cy="256" r="120" stroke="url(#ring)" stroke-width="2" stroke-dasharray="8 6" fill="none"/>
+  <circle cx="256" cy="256" r="76" fill="url(#silverOrb)"/>
+  <circle cx="240" cy="240" r="18" fill="#ffffff" opacity="0.9"/>
+</svg>
